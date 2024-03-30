@@ -1,0 +1,196 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <title>PI RADIO</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        @media only screen and (max-width: 1199px) {
+            html * {
+                font-size: 3.5rem;
+            }
+            .button {
+                margin: 1rem 0.5rem;
+                height: 10rem;
+            }
+        }
+
+        @media only screen and (min-width: 1200px) {
+            html * {
+                font-size: 1.5rem;
+            }
+            .button {
+                margin: 0.5rem 0.5rem;
+                height: 5rem;
+            }
+        }
+
+        html * {
+            font-family: 'Playfair Display', serif;
+            font-weight: 400;
+        }
+
+        strong {
+            font-weight: 700;
+        }
+    </style>
+</head>
+<body style="display: flex; flex-direction: column; ">
+    <button class="button" onclick="playPauseClick()" id="playPauseBtn"></button>
+    <button class="button" onclick="channelBtnClick(btnChannel1.dataset.channelName)" id="btn_channel1"></button>
+    <button class="button" onclick="channelBtnClick(btnChannel2.dataset.channelName)" id="btn_channel2"></button>
+    <button class="button" onclick="channelBtnClick(btnChannel3.dataset.channelName)" id="btn_channel3"></button>
+    <button class="button" onclick="channelBtnClick(btnChannel4.dataset.channelName)" id="btn_channel4"></button>
+    <div style="display: flex;"><!--TODO hide these when not avaiable-->
+        <button class="button" style="width: 100%;" onclick="volumeDown()">VOL -</button>
+        <button class="button" style="width: 100%;" onclick="volumeUp()">VOL +</button>
+    </div>
+    <h2 id="status_txt"></h2>
+</body>
+<script>
+    const status_txt = document.getElementById("status_txt");
+    const playPauseBtn= document.getElementById("playPauseBtn");
+    const btnChannel1 = document.getElementById("btn_channel1");
+    const btnChannel2 = document.getElementById("btn_channel2");
+    const btnChannel3 = document.getElementById("btn_channel3");
+    const btnChannel4 = document.getElementById("btn_channel4");
+
+    function loadInitData() {
+        fetch('/api/getStatus')
+        .then(
+            function(response) {
+                if (response.status !== 200) {
+                    status_txt.innerHTML = '/api/getStatus Error Status:' + response.status
+                    return;
+                }
+                response.json().then(function(data) {
+                    console.log(data);
+                    const state = data.state
+                    let btn1Txt = "ERR:unknown state " + state
+                    if (state.toLowerCase() === "playing") {
+                        btn1Txt = "Stop"
+                    }
+                    else if (state.toLowerCase() === "stopped") {
+                        btn1Txt = "Play"
+                    }
+                    playPauseBtn.innerHTML = btn1Txt;
+                    btnChannel1.innerHTML = data.channels[0];
+                    btnChannel1.dataset.channelName = data.channels[0];
+                    btnChannel2.innerHTML = data.channels[1];
+                    btnChannel2.dataset.channelName = data.channels[1];
+                    btnChannel3.innerHTML = data.channels[2];
+                    btnChannel3.dataset.channelName = data.channels[2];
+                    btnChannel4.innerHTML = data.channels[3];
+                    btnChannel4.dataset.channelName = data.channels[3];
+                    let statusTxt = "<strong>Channel:</strong> " + data.currentChannel;
+                    if (data.currentSong || data.currentArtist) {
+                        statusTxt += "<br/><strong>Artist:</strong> " + data.currentArtist + "<br/><strong>Song:</strong> " + data.currentSong;
+                    }
+                    statusTxt += "<br/>" + data.output
+                    status_txt.innerHTML = statusTxt;
+                });
+            }
+        )
+        .catch(function(err) {
+            status_txt.innerHTML = '/api/getStatus Error ' + err
+        })
+    }
+    
+    function playPauseClick() {
+        fetch('/api/playPause')
+        .then(
+            function(response) {
+                if (response.status !== 200) {
+                    status_txt.innerHTML = '/api/playPause Error Status:' + response.status
+                    return;
+                }
+                response.json().then(function(data) {
+                    let btn1Txt = "ERR:unknown state " + data.state
+                    if (data.state.toLowerCase() === "playing") {
+                        btn1Txt = "Stop"
+                    }
+                    else if (data.state.toLowerCase() === "stopped") {
+                        btn1Txt = "Play"
+                    }
+                    playPauseBtn.innerHTML = btn1Txt;
+                })
+            }
+        )
+        .catch(function(err) {
+            status_txt.innerHTML = '/api/playPause Error ' + err
+        })
+    }
+
+    function channelBtnClick(channelName) {
+        fetch('/api/changeChannel', {
+            method: "POST",
+            body: JSON.stringify({channelName: channelName}),
+            headers: {"Content-Type": "application/json"}
+        })
+        .then(
+            function(response) {
+                if (response.status !== 200) {
+                    status_txt.innerHTML = '/api/channelBtnClick Error Status:' + response.status
+                    return;
+                }
+                response.json().then(function(data) {
+                    console.log(data);
+                    if (data.status != "OK") {
+                        status_txt.innerHTML = data.status
+                    } else {
+                        loadInitData();
+                    }
+                })
+            }
+        )
+        .catch(function(err) {
+            status_txt.innerHTML = '/api/channelBtnClick Error ' + err
+        })
+    }
+
+    function volumeDown() {
+        fetch('/api/volumeDown', {method: "POST"})
+        .then(
+            function(response) {
+                if (response.status !== 200) {
+                    status_txt.innerHTML = '/api/volumeDown Error Status:' + response.status
+                    return;
+                }
+                response.json().then(function(data) {
+                    console.log(data);
+                    if (data.status != "OK") {
+                        status_txt.innerHTML = data.status
+                    }
+                })
+            }
+        )
+        .catch(function(err) {
+            status_txt.innerHTML = '/api/volumeDown Error ' + err
+        })
+    }
+
+    function volumeUp() {
+        fetch('/api/volumeUp', {method: "POST"})
+        .then(
+            function(response) {
+                if (response.status !== 200) {
+                    status_txt.innerHTML = '/api/volumeUp Error Status:' + response.status
+                    return;
+                }
+                response.json().then(function(data) {
+                    console.log(data);
+                    if (data.status != "OK") {
+                        status_txt.innerHTML = data.status
+                    }
+                })
+            }
+        )
+        .catch(function(err) {
+            status_txt.innerHTML = '/api/volumeUp Error ' + err
+        })
+    }
+
+    loadInitData();
+</script>
+</html>
